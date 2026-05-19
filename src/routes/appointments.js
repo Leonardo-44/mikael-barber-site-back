@@ -3,7 +3,7 @@ import {
   getMyAppointments,
   getAllAppointments,
   createAppointment,
-  updateAppointment,
+  updateStatus,
   deleteAppointment,
   getDashboardStats,
 } from '../controllers/appointmentController.js';
@@ -17,7 +17,7 @@ router.get('/',       getMyAppointments);
 router.get('/all',    getAllAppointments);
 router.get('/stats',  getDashboardStats);
 router.post('/',      createAppointment);
-router.put('/:id',    updateAppointment);
+router.put('/:id',    updateStatus);
 router.delete('/:id', deleteAppointment);
 
 export default router;
