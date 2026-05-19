@@ -9,10 +9,26 @@ const app = express();
 const PORT = process.env.PORT || 3333;
 
 // ── Middlewares globais ──
+const allowedOrigins = [
+  'https://mikaer-barber-site-front.vercel.app', // Sua URL da Vercel
+  'http://localhost:5173',                         // Seu ambiente local (Vite)
+  'http://127.0.0.1:5173'                         // Alternativa local comum
+];
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || '*',
+  origin: function (origin, callback) {
+    // Permite requisições sem origem (como Mobile, Postman, Insomnia)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Bloqueado pela política de CORS'));
+    }
+  },
   credentials: true,
 }));
+
 app.use(express.json());
 
 // ── Health check ──
