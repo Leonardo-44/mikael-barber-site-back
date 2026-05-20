@@ -1,4 +1,5 @@
 import { sql } from '../config/database.js';
+import 'dotenv/config';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -244,7 +245,8 @@ export async function getDashboardStats(req, res) {
 
 export async function updateAppointment(req, res) {
   const { id } = req.params;
-  const { id: barberId } = req.barber;
+  const { id: barberId, username } = req.barber;
+  const isAdmin = username?.toLowerCase() === process.env.ADMIN_USERNAME?.toLowerCase();
 
   const { clientName, clientPhone, cut, price, consumables, obs, status, date, time } = req.body;
 
@@ -262,19 +264,34 @@ export async function updateAppointment(req, res) {
       ? JSON.stringify(consumables.map((c) => ({ name: c.name, price: parseFloat(c.price) || 0 })))
       : '[]';
 
-    const rows = await sql`
-      UPDATE appointments SET
-        client_name  = ${clientName?.trim() || ''},
-        client_phone = ${clientPhone?.trim() || ''},
-        cut          = ${cut?.trim() || ''},
-        total_price  = ${price != null ? parseFloat(price) : 0},
-        consumables  = ${consumablesJson},
-        obs          = ${obs?.trim() || ''},
-        status       = ${status || 'pending'},
-        scheduled_at = ${scheduledAt}
-      WHERE id = ${id} AND barber_id = ${barberId}
-      RETURNING *
-    `;
+    // Admin pode editar qualquer agendamento, barbeiro só o seu
+    const rows = isAdmin
+      ? await sql`
+          UPDATE appointments SET
+            client_name  = ${clientName?.trim() || ''},
+            client_phone = ${clientPhone?.trim() || ''},
+            cut          = ${cut?.trim() || ''},
+            total_price  = ${price != null ? parseFloat(price) : 0},
+            consumables  = ${consumablesJson},
+            obs          = ${obs?.trim() || ''},
+            status       = ${status || 'pending'},
+            scheduled_at = ${scheduledAt}
+          WHERE id = ${id}
+          RETURNING *
+        `
+      : await sql`
+          UPDATE appointments SET
+            client_name  = ${clientName?.trim() || ''},
+            client_phone = ${clientPhone?.trim() || ''},
+            cut          = ${cut?.trim() || ''},
+            total_price  = ${price != null ? parseFloat(price) : 0},
+            consumables  = ${consumablesJson},
+            obs          = ${obs?.trim() || ''},
+            status       = ${status || 'pending'},
+            scheduled_at = ${scheduledAt}
+          WHERE id = ${id} AND barber_id = ${barberId}
+          RETURNING *
+        `;
 
     if (!rows[0]) return res.status(404).json({ error: 'Agendamento não encontrado' });
 
