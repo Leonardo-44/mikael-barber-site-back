@@ -59,7 +59,7 @@ export async function register(req, res) {
   }
 
   // Só o admin pode criar barbeiros
-  if (req.barber?.username !== 'mikael') {
+  if (req.barber?.username?.toLowerCase() !== import.meta.env.ADMIN_USERNAME?.toLowerCase()) {
     return res.status(403).json({ error: 'Acesso negado' });
   }
 
@@ -89,7 +89,7 @@ export async function register(req, res) {
 }
 
 export async function getBarbers(req, res) {
-  if (req.barber?.username !== 'mikael') {
+  if (req.barber?.username?.toLowerCase() !== import.meta.env.ADMIN_USERNAME?.toLowerCase()) {
     return res.status(403).json({ error: 'Acesso negado' });
   }
 
