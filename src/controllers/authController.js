@@ -87,3 +87,19 @@ export async function register(req, res) {
     return res.status(500).json({ error: 'Erro ao criar barbeiro' });
   }
 }
+
+export async function getBarbers(req, res) {
+  if (req.barber?.username !== 'mikael') {
+    return res.status(403).json({ error: 'Acesso negado' });
+  }
+
+  try {
+    const barbers = await sql`
+      SELECT id, name, username FROM barbers ORDER BY name ASC
+    `;
+    return res.json({ barbers });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao buscar barbeiros' });
+  }
+}
