@@ -182,14 +182,21 @@ export async function updateStatus(req, res) {
 
 export async function deleteAppointment(req, res) {
   const { id } = req.params;
-  const { id: barberId } = req.barber;
+  const { id: barberId, username } = req.barber;
+  const isAdmin = username?.toLowerCase() === process.env.ADMIN_USERNAME?.toLowerCase();
 
   try {
-    const rows = await sql`
-      DELETE FROM appointments
-      WHERE id = ${id} AND barber_id = ${barberId}
-      RETURNING id
-    `;
+    const rows = isAdmin
+      ? await sql`
+          DELETE FROM appointments
+          WHERE id = ${id}
+          RETURNING id
+        `
+      : await sql`
+          DELETE FROM appointments
+          WHERE id = ${id} AND barber_id = ${barberId}
+          RETURNING id
+        `;
 
     if (!rows[0]) return res.status(404).json({ error: 'Agendamento não encontrado' });
 
