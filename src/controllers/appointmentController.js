@@ -1,48 +1,59 @@
 import { sql } from '../config/database.js';
 
-// Busca consumíveis de uma lista de appointment IDs e agrupa por appointment_id
-async function fetchConsumables(appointmentIds) {
-  if (!appointmentIds.length) return {};
-  const rows = await sql`
-    SELECT * FROM consumables WHERE appointment_id = ANY(${appointmentIds})
-  `;
-  return rows.reduce((acc, c) => {
-    if (!acc[c.appointment_id]) acc[c.appointment_id] = [];
-    acc[c.appointment_id].push({ name: c.name, price: c.price });
-    return acc;
-  }, {});
+// ── helpers ──────────────────────────────────────────────────────────────────
+
+// Normaliza a linha do banco para o formato que o frontend espera
+function formatRow(a) {
+  const scheduled = a.scheduled_at ? new Date(a.scheduled_at) : null;
+  return {
+    ...a,
+    barber_name:  a.barber_name  || null,           // vem do JOIN abaixo
+    consumables:  Array.isArray(a.consumables)
+                    ? a.consumables
+                    : (a.consumables ? JSON.parse(a.consumables) : []),
+    date: scheduled
+      ? scheduled.toLocaleDateString('pt-BR')
+      : null,
+    time: scheduled
+      ? scheduled.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+      : null,
+  };
 }
 
-// Monta appointments com array de consumables embutido
-function mergeConsumables(appointments, consMap) {
-  return appointments.map((a) => ({
-    ...a,
-    consumables: consMap[a.id] || [],
-  }));
-}
+// ── controllers ──────────────────────────────────────────────────────────────
 
 export async function getMyAppointments(req, res) {
   try {
-    const { id: barberId, name: barberName } = req.barber;
-    const { date } = req.query;
+    const { id: barberId } = req.barber;
+    const { date } = req.query; // formato: DD/MM/YYYY (pt-BR)
 
-    const rows = date
-      ? await sql`
-          SELECT * FROM appointments
-          WHERE barber_id = ${barberId} AND date = ${date}
-          ORDER BY time DESC
-        `
-      : await sql`
-          SELECT * FROM appointments
-          WHERE barber_id = ${barberId}
-          ORDER BY created_at DESC
-          LIMIT 50
-        `;
+    let rows;
 
-    const ids = rows.map((r) => r.id);
-    const consMap = await fetchConsumables(ids);
+    if (date) {
+      // Converte DD/MM/YYYY → YYYY-MM-DD para filtrar no banco
+      const [d, m, y] = date.split('/');
+      const iso = `${y}-${m}-${d}`;
 
-    return res.json({ appointments: mergeConsumables(rows, consMap) });
+      rows = await sql`
+        SELECT a.*, b.name AS barber_name
+        FROM appointments a
+        JOIN barbers b ON b.id = a.barber_id
+        WHERE a.barber_id = ${barberId}
+          AND DATE(a.scheduled_at) = ${iso}
+        ORDER BY a.scheduled_at DESC
+      `;
+    } else {
+      rows = await sql`
+        SELECT a.*, b.name AS barber_name
+        FROM appointments a
+        JOIN barbers b ON b.id = a.barber_id
+        WHERE a.barber_id = ${barberId}
+        ORDER BY a.created_at DESC
+        LIMIT 50
+      `;
+    }
+
+    return res.json({ appointments: rows.map(formatRow) });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Erro ao buscar agendamentos' });
@@ -53,21 +64,30 @@ export async function getAllAppointments(req, res) {
   try {
     const { date } = req.query;
 
-    const rows = date
-      ? await sql`
-          SELECT * FROM appointments WHERE date = ${date}
-          ORDER BY time DESC
-        `
-      : await sql`
-          SELECT * FROM appointments
-          ORDER BY created_at DESC
-          LIMIT 50
-        `;
+    let rows;
 
-    const ids = rows.map((r) => r.id);
-    const consMap = await fetchConsumables(ids);
+    if (date) {
+      const [d, m, y] = date.split('/');
+      const iso = `${y}-${m}-${d}`;
 
-    return res.json({ appointments: mergeConsumables(rows, consMap) });
+      rows = await sql`
+        SELECT a.*, b.name AS barber_name
+        FROM appointments a
+        JOIN barbers b ON b.id = a.barber_id
+        WHERE DATE(a.scheduled_at) = ${iso}
+        ORDER BY a.scheduled_at DESC
+      `;
+    } else {
+      rows = await sql`
+        SELECT a.*, b.name AS barber_name
+        FROM appointments a
+        JOIN barbers b ON b.id = a.barber_id
+        ORDER BY a.created_at DESC
+        LIMIT 50
+      `;
+    }
+
+    return res.json({ appointments: rows.map(formatRow) });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Erro ao buscar agendamentos' });
@@ -75,16 +95,15 @@ export async function getAllAppointments(req, res) {
 }
 
 export async function createAppointment(req, res) {
-  const { id: barberId, name: barberName } = req.barber;
+  const { id: barberId } = req.barber;
 
-  // Campos vindos do AppointmentForm.jsx
   const {
-    clientName,       // nome do cliente
-    clientPhone,      // telefone
-    cut,              // tipo de corte
-    price,            // total (serviço + consumíveis)
-    servicePrice,     // só o serviço
-    consumables = [], // [{ name, price }]
+    clientName,
+    clientPhone,
+    cut,
+    price,
+    servicePrice,
+    consumables = [],
     obs,
     status = 'pending',
     date,
@@ -96,45 +115,45 @@ export async function createAppointment(req, res) {
   }
 
   try {
-    const now = new Date();
-    const recordDate = date || now.toLocaleDateString('pt-BR');
-    const recordTime = time || now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    let scheduledAt = new Date();
 
-    // Insere o agendamento
-    const apptRows = await sql`
+    if (date && time) {
+      const [d, m, y] = date.split('/');
+      scheduledAt = new Date(`${y}-${m}-${d}T${time}:00`);
+    } else if (date) {
+      const [d, m, y] = date.split('/');
+      scheduledAt = new Date(`${y}-${m}-${d}T00:00:00`);
+    }
+
+    const consumablesJson = JSON.stringify(
+      consumables.map((c) => ({ name: c.name, price: parseFloat(c.price) || 0 }))
+    );
+
+    // ✅ Sem ::jsonb — passa como string, o Postgres infere o tipo pela coluna
+    const rows = await sql`
       INSERT INTO appointments
-        (barber_id, barber_name, client_name, client_phone, cut,
-         service_price, total_price, obs, status, date, time)
+        (barber_id, client_name, client_phone, cut,
+         service_price, total_price, consumables,
+         obs, status, scheduled_at)
       VALUES
-        (${barberId}, ${barberName}, ${clientName}, ${clientPhone ?? null}, ${cut},
-         ${servicePrice ?? null}, ${price ?? null}, ${obs ?? null},
-         ${status}, ${recordDate}, ${recordTime})
+        (${barberId}, ${clientName.trim()}, ${clientPhone?.trim() ?? null}, ${cut},
+         ${servicePrice ?? null}, ${price ?? null}, ${consumablesJson},
+         ${obs?.trim() ?? null}, ${status}, ${scheduledAt.toISOString()})
       RETURNING *
     `;
 
-    const appt = apptRows[0];
+    const appt = rows[0];
+    const barberRows = await sql`SELECT name FROM barbers WHERE id = ${barberId}`;
+    appt.barber_name = barberRows[0]?.name ?? null;
 
-    // Insere os consumíveis (se houver)
-    if (consumables.length > 0) {
-      for (const c of consumables) {
-        await sql`
-          INSERT INTO consumables (appointment_id, name, price)
-          VALUES (${appt.id}, ${c.name}, ${parseFloat(c.price) || 0})
-        `;
-      }
-    }
-
-    return res.status(201).json({
-      appointment: { ...appt, consumables },
-    });
+    return res.status(201).json({ appointment: formatRow(appt) });
   } catch (err) {
-    console.error(err);
-    return res.status(500).json({ error: 'Erro ao criar agendamento' });
+    console.error('Erro createAppointment:', err); // ← vai aparecer no log do Render
+    return res.status(500).json({ error: err.message }); // ← temporário para ver o erro real
   }
 }
 
 export async function updateStatus(req, res) {
-  // Chamado quando o barbeiro muda o status pelo StatusSelect na lista
   const { id } = req.params;
   const { id: barberId } = req.barber;
   const { status } = req.body;
@@ -153,7 +172,7 @@ export async function updateStatus(req, res) {
 
     if (!rows[0]) return res.status(404).json({ error: 'Agendamento não encontrado' });
 
-    return res.json({ appointment: rows[0] });
+    return res.json({ appointment: formatRow(rows[0]) });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Erro ao atualizar status' });
@@ -165,7 +184,6 @@ export async function deleteAppointment(req, res) {
   const { id: barberId } = req.barber;
 
   try {
-    // consumables deletados automaticamente pelo ON DELETE CASCADE
     const rows = await sql`
       DELETE FROM appointments
       WHERE id = ${id} AND barber_id = ${barberId}
@@ -185,19 +203,22 @@ export async function getDashboardStats(req, res) {
   const { id: barberId } = req.barber;
 
   try {
-    const today = new Date().toLocaleDateString('pt-BR');
+    // "hoje" em UTC — ajuste o fuso se necessário
+    const todayIso = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
 
     const [todayStats, weekStats, topCuts] = await Promise.all([
       sql`
         SELECT COUNT(*) AS total, COALESCE(SUM(total_price), 0) AS revenue
         FROM appointments
-        WHERE barber_id = ${barberId} AND date = ${today} AND status = 'done'
+        WHERE barber_id = ${barberId}
+          AND DATE(scheduled_at) = ${todayIso}
+          AND status = 'done'
       `,
       sql`
         SELECT COUNT(*) AS total, COALESCE(SUM(total_price), 0) AS revenue
         FROM appointments
         WHERE barber_id = ${barberId}
-          AND created_at >= NOW() - INTERVAL '7 days'
+          AND scheduled_at >= NOW() - INTERVAL '7 days'
           AND status = 'done'
       `,
       sql`
@@ -212,7 +233,7 @@ export async function getDashboardStats(req, res) {
 
     return res.json({
       today: todayStats[0],
-      week: weekStats[0],
+      week:  weekStats[0],
       topCuts,
     });
   } catch (err) {
