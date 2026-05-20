@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { sql } from '../config/database.js';
+import 'dotenv/config';
 
 export async function login(req, res) {
   const { username, password } = req.body;
