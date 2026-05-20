@@ -8,7 +8,7 @@ import {
   getDashboardStats,
 } from '../controllers/appointmentController.js';
 import { authMiddleware } from '../middlewares/auth.js';
-'dotenv/config';
+import 'dotenv/config';
 
 const router = Router();
 
