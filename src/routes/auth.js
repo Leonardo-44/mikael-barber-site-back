@@ -7,4 +7,6 @@ const router = Router();
 router.post('/login',    login);
 router.post('/register', authMiddleware, register);
 router.get('/me',        authMiddleware, me);
-router.get('/barbers',   authMiddleware, getBarbers); // ✅ esta linha precisa estar aqui
+router.get('/barbers',   authMiddleware, getBarbers);
+
+export default router; 
