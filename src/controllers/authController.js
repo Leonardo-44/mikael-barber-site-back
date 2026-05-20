@@ -50,3 +50,40 @@ export async function login(req, res) {
 export async function me(req, res) {
   return res.json({ barber: req.barber });
 }
+
+export async function register(req, res) {
+  const { name, username, password } = req.body;
+
+  if (!name || !username || !password) {
+    return res.status(400).json({ error: 'Nome, usuário e senha são obrigatórios' });
+  }
+
+  // Só o admin pode criar barbeiros
+  if (req.barber?.username !== 'mikael') {
+    return res.status(403).json({ error: 'Acesso negado' });
+  }
+
+  try {
+    // Verifica se usuário já existe
+    const existing = await sql`
+      SELECT id FROM barbers WHERE username = ${username} LIMIT 1
+    `;
+
+    if (existing.length > 0) {
+      return res.status(400).json({ error: 'Usuário já existe' });
+    }
+
+    const hashed = await bcrypt.hash(password, 10);
+
+    const rows = await sql`
+      INSERT INTO barbers (name, username, password)
+      VALUES (${name}, ${username}, ${hashed})
+      RETURNING id, name, username
+    `;
+
+    return res.status(201).json({ barber: rows[0] });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Erro ao criar barbeiro' });
+  }
+}
