@@ -8,6 +8,7 @@ import {
   getDashboardStats,
 } from '../controllers/appointmentController.js';
 import { authMiddleware } from '../middlewares/auth.js';
+'dotenv/config';
 
 const router = Router();
 
@@ -15,7 +16,7 @@ router.use(authMiddleware); // ✅ protege todas as rotas abaixo
 
 // GET /appointments — admin vê todos, barbeiro vê só os seus
 router.get('/', (req, res, next) => {
-  const isAdmin = req.barber?.username === 'mikael';
+  const isAdmin = req.barber?.username?.toLowerCase() === process.env.ADMIN_USERNAME?.toLowerCase();
   const showAll = req.query.all === 'true' && isAdmin;
 
   return showAll
