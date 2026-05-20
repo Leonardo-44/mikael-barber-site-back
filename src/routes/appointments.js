@@ -4,6 +4,7 @@ import {
   getAllAppointments,
   createAppointment,
   updateStatus,
+  updateAppointment,
   deleteAppointment,
   getDashboardStats,
 } from '../controllers/appointmentController.js';
@@ -29,5 +30,6 @@ router.get('/stats',  getDashboardStats);
 router.post('/',      createAppointment);
 router.put('/:id',    updateStatus);
 router.delete('/:id', deleteAppointment);
+router.put('/:id', updateAppointment)
 
 export default router;

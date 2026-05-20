@@ -241,3 +241,53 @@ export async function getDashboardStats(req, res) {
     return res.status(500).json({ error: 'Erro ao buscar estatísticas' });
   }
 }
+
+export async function updateAppointment(req, res) {
+  const { id } = req.params;
+  const { id: barberId } = req.barber;
+
+  const { clientName, clientPhone, cut, price, consumables, obs, status, date, time } = req.body;
+
+  try {
+    let scheduledAt = null;
+    if (date && time) {
+      const [d, m, y] = date.split('/');
+      scheduledAt = new Date(`${y}-${m}-${d}T${time}:00`).toISOString();
+    } else if (date) {
+      const [d, m, y] = date.split('/');
+      scheduledAt = new Date(`${y}-${m}-${d}T00:00:00`).toISOString();
+    }
+
+    const consumablesJson = consumables
+      ? JSON.stringify(consumables.map((c) => ({ name: c.name, price: parseFloat(c.price) || 0 })))
+      : '[]';
+
+    const rows = await sql`
+      UPDATE appointments SET
+        client_name  = ${clientName?.trim() || ''},
+        client_phone = ${clientPhone?.trim() || ''},
+        cut          = ${cut?.trim() || ''},
+        total_price  = ${price != null ? parseFloat(price) : 0},
+        consumables  = ${consumablesJson},
+        obs          = ${obs?.trim() || ''},
+        status       = ${status || 'pending'},
+        scheduled_at = ${scheduledAt}
+      WHERE id = ${id} AND barber_id = ${barberId}
+      RETURNING *
+    `;
+
+    if (!rows[0]) return res.status(404).json({ error: 'Agendamento não encontrado' });
+
+    const full = await sql`
+      SELECT a.*, b.name AS barber_name
+      FROM appointments a
+      JOIN barbers b ON b.id = a.barber_id
+      WHERE a.id = ${rows[0].id}
+    `;
+
+    return res.json({ appointment: formatRow(full[0]) });
+  } catch (err) {
+    console.error('Erro updateAppointment:', err);
+    return res.status(500).json({ error: err.message });
+  }
+}
