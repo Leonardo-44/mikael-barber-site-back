@@ -127,7 +127,7 @@ export async function createAppointment(req, res) {
     }
 
     const consumablesJson = JSON.stringify(
-      consumables.map((c) => ({ name: c.name, price: parseFloat(c.price) || 0 }))
+      consumables.map((c) => ({ name: c.name, price: parseFloat(c.price) || 0, qty: c.qty || 1 }))
     );
 
     // ✅ Sem ::jsonb — passa como string, o Postgres infere o tipo pela coluna
@@ -268,7 +268,7 @@ export async function updateAppointment(req, res) {
     }
 
     const consumablesJson = consumables
-      ? JSON.stringify(consumables.map((c) => ({ name: c.name, price: parseFloat(c.price) || 0 })))
+      ? JSON.stringify(consumables.map((c) => ({ name: c.name, price: parseFloat(c.price) || 0, qty: c.qty || 1 })))
       : '[]';
 
     // Admin pode editar qualquer agendamento, barbeiro só o seu
