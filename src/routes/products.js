@@ -3,7 +3,7 @@
 // ============================================
 import express from 'express';
 import { neon } from '@neondatabase/serverless';
-import { authenticateToken } from '../middleware/auth.js'; // ajuste o caminho se necessário
+import { authenticateToken } from '../middlewares/auth'; // ajuste o caminho se necessário
 
 const router = express.Router();
 const sql = neon(process.env.DATABASE_URL);
