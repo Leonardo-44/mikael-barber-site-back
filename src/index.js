@@ -4,6 +4,7 @@ import cors from 'cors';
 
 import authRoutes from './routes/auth.js';
 import appointmentRoutes from './routes/appointments.js';
+import productRoutes from './routes/products.js';
 
 const app = express();
 const PORT = process.env.PORT || 3333;
@@ -39,6 +40,7 @@ app.get('/health', (_req, res) => {
 // ── Rotas ──
 app.use('/api/auth', authRoutes);
 app.use('/api/appointments', appointmentRoutes);
+app.use('/api/products', productRoutes);
 
 // ── 404 ──
 app.use((_req, res) => {
@@ -50,3 +52,4 @@ app.listen(PORT, () => {
   console.log(`\n🪒 Mikael Barber API rodando na porta ${PORT}`);
   console.log(`   → http://localhost:${PORT}/health\n`);
 });
+
