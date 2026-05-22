@@ -3,13 +3,13 @@
 // ============================================
 import express from 'express';
 import { neon } from '@neondatabase/serverless';
-import { authMiddleware } from '../middlewares/auth.js'; 
+import { authMiddleware } from '../middlewares/auth.js';
 
 const router = express.Router();
 const sql = neon(process.env.DATABASE_URL);
 
 // ── GET /api/products — lista todos ──
-router.get('/', authenticateToken, async (req, res) => {
+router.get('/', authMiddleware, async (req, res) => {
   try {
     const rows = await sql`
       SELECT * FROM products ORDER BY name ASC
@@ -22,7 +22,7 @@ router.get('/', authenticateToken, async (req, res) => {
 });
 
 // ── POST /api/products — cria produto ──
-router.post('/', authenticateToken, async (req, res) => {
+router.post('/', authMiddleware, async (req, res) => {
   const { name, price, unit = 'un', stock = 0, category = 'outros' } = req.body;
 
   if (!name?.trim()) {
@@ -46,7 +46,7 @@ router.post('/', authenticateToken, async (req, res) => {
 });
 
 // ── PUT /api/products/:id — atualiza produto ──
-router.put('/:id', authenticateToken, async (req, res) => {
+router.put('/:id', authMiddleware, async (req, res) => {
   const { id } = req.params;
   const { name, price, unit, stock, category } = req.body;
 
@@ -76,7 +76,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
 });
 
 // ── DELETE /api/products/:id — remove produto ──
-router.delete('/:id', authenticateToken, async (req, res) => {
+router.delete('/:id', authMiddleware, async (req, res) => {
   const { id } = req.params;
   try {
     await sql`DELETE FROM products WHERE id = ${id}`;
