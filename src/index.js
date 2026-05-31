@@ -11,7 +11,7 @@ const PORT = process.env.PORT || 3333;
 
 // ── Middlewares globais ──
 const allowedOrigins = [
-  'https://mikaer-barber-site-front.vercel.app', // Sua URL da Vercel
+  'https://mikaer-barber.vercel.app',
   'http://localhost:5173',                         // Seu ambiente local (Vite)
   'http://127.0.0.1:5173'                         // Alternativa local comum
 ];
