@@ -5,6 +5,7 @@ import cors from 'cors';
 import authRoutes from './routes/auth.js';
 import appointmentRoutes from './routes/appointments.js';
 import productRoutes from './routes/products.js';
+import serviceRoutes     from './routes/services.js';
 
 const app = express();
 const PORT = process.env.PORT || 3333;
@@ -41,6 +42,7 @@ app.get('/health', (_req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/products', productRoutes);
+app.use('/api/services',     serviceRoutes);
 
 // ── 404 ──
 app.use((_req, res) => {
