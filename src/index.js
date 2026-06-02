@@ -6,6 +6,7 @@ import authRoutes from './routes/auth.js';
 import appointmentRoutes from './routes/appointments.js';
 import productRoutes from './routes/products.js';
 import serviceRoutes     from './routes/services.js';
+import clientRoutes from "./routes/clients.js";
 
 const app = express();
 const PORT = process.env.PORT || 3333;
@@ -43,6 +44,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/services',     serviceRoutes);
+app.use('/api/clients', clientRoutes);  
 
 // ── 404 ──
 app.use((_req, res) => {
