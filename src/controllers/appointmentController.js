@@ -3,18 +3,15 @@ import 'dotenv/config';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
-// Normaliza a linha do banco para o formato que o frontend espera
 function formatRow(a) {
   const scheduled = a.scheduled_at ? new Date(a.scheduled_at) : null;
   return {
     ...a,
-    barber_name:  a.barber_name  || null,           // vem do JOIN abaixo
-    consumables:  Array.isArray(a.consumables)
-                    ? a.consumables
-                    : (a.consumables ? JSON.parse(a.consumables) : []),
-    date: scheduled
-      ? scheduled.toLocaleDateString('pt-BR')
-      : null,
+    barber_name: a.barber_name ?? null,
+    consumables: Array.isArray(a.consumables)
+      ? a.consumables
+      : (a.consumables ? JSON.parse(a.consumables) : []),
+    date: scheduled ? scheduled.toLocaleDateString('pt-BR') : null,
     time: scheduled
       ? scheduled.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
       : null,
@@ -26,15 +23,13 @@ function formatRow(a) {
 export async function getMyAppointments(req, res) {
   try {
     const { id: barberId } = req.barber;
-    const { date } = req.query; // formato: DD/MM/YYYY (pt-BR)
+    const { date } = req.query;
 
     let rows;
 
     if (date) {
-      // Converte DD/MM/YYYY → YYYY-MM-DD para filtrar no banco
       const [d, m, y] = date.split('/');
       const iso = `${y}-${m}-${d}`;
-
       rows = await sql`
         SELECT a.*, b.name AS barber_name
         FROM appointments a
@@ -50,7 +45,7 @@ export async function getMyAppointments(req, res) {
         JOIN barbers b ON b.id = a.barber_id
         WHERE a.barber_id = ${barberId}
         ORDER BY a.created_at DESC
-        LIMIT 50
+        LIMIT 200
       `;
     }
 
@@ -70,7 +65,6 @@ export async function getAllAppointments(req, res) {
     if (date) {
       const [d, m, y] = date.split('/');
       const iso = `${y}-${m}-${d}`;
-
       rows = await sql`
         SELECT a.*, b.name AS barber_name
         FROM appointments a
@@ -84,7 +78,7 @@ export async function getAllAppointments(req, res) {
         FROM appointments a
         JOIN barbers b ON b.id = a.barber_id
         ORDER BY a.created_at DESC
-        LIMIT 50
+        LIMIT 200
       `;
     }
 
@@ -96,10 +90,9 @@ export async function getAllAppointments(req, res) {
 }
 
 export async function createAppointment(req, res) {
-  console.log('BODY RECEBIDO:', req.body);
   const { id: barberId } = req.barber;
 
-  const {  
+  const {
     clientName,
     clientPhone,
     cut,
@@ -137,9 +130,9 @@ export async function createAppointment(req, res) {
          service_price, total_price, consumables,
          obs, status, scheduled_at)
       VALUES
-        (${barberId}, ${clientName.trim()}, ${clientPhone?.trim() ?? null}, ${cut},
-         ${servicePrice ?? null}, ${price ?? null}, ${consumablesJson},
-         ${obs?.trim() ?? null}, ${status}, ${scheduledAt.toISOString()})
+        (${barberId}, ${clientName.trim()}, ${clientPhone?.trim() ?? null}, ${cut ?? ''},
+         ${servicePrice ? parseFloat(servicePrice) : null}, ${price ? parseFloat(price) : null},
+         ${consumablesJson}, ${obs?.trim() ?? null}, ${status}, ${scheduledAt.toISOString()})
       RETURNING *
     `;
 
@@ -187,16 +180,8 @@ export async function deleteAppointment(req, res) {
 
   try {
     const rows = isAdmin
-      ? await sql`
-          DELETE FROM appointments
-          WHERE id = ${id}
-          RETURNING id
-        `
-      : await sql`
-          DELETE FROM appointments
-          WHERE id = ${id} AND barber_id = ${barberId}
-          RETURNING id
-        `;
+      ? await sql`DELETE FROM appointments WHERE id = ${id} RETURNING id`
+      : await sql`DELETE FROM appointments WHERE id = ${id} AND barber_id = ${barberId} RETURNING id`;
 
     if (!rows[0]) return res.status(404).json({ error: 'Agendamento não encontrado' });
 
@@ -211,7 +196,7 @@ export async function getDashboardStats(req, res) {
   const { id: barberId } = req.barber;
 
   try {
-    const todayIso = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    const todayIso = new Date().toISOString().slice(0, 10);
 
     const [todayStats, weekStats, topCuts] = await Promise.all([
       sql`
@@ -270,7 +255,6 @@ export async function updateAppointment(req, res) {
       ? JSON.stringify(consumables.map((c) => ({ name: c.name, price: parseFloat(c.price) || 0, qty: c.qty || 1 })))
       : '[]';
 
-    // Admin pode editar qualquer agendamento, barbeiro só o seu
     const rows = isAdmin
       ? await sql`
           UPDATE appointments SET
