@@ -96,9 +96,10 @@ export async function getAllAppointments(req, res) {
 }
 
 export async function createAppointment(req, res) {
+  console.log('BODY RECEBIDO:', req.body);
   const { id: barberId } = req.barber;
 
-  const {
+  const {  
     clientName,
     clientPhone,
     cut,
@@ -111,7 +112,7 @@ export async function createAppointment(req, res) {
     time,
   } = req.body;
 
-  if (!clientName || !cut) {
+  if (!clientName) {
     return res.status(400).json({ error: 'Nome do cliente e corte são obrigatórios' });
   }
 

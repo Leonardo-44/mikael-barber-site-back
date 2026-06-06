@@ -19,17 +19,16 @@ router.use(authMiddleware); // ✅ protege todas as rotas abaixo
 router.get('/', (req, res, next) => {
   const isAdmin = req.barber?.username?.toLowerCase() === process.env.ADMIN_USERNAME?.toLowerCase();
   const showAll = req.query.all === 'true' && isAdmin;
-
-  return showAll
-    ? getAllAppointments(req, res, next)  // controller que já busca tudo
-    : getMyAppointments(req, res, next); // controller que filtra pelo barbeiro
+  return showAll ? getAllAppointments(req, res, next) : getMyAppointments(req, res, next);
 });
 
-router.get('/all',    getAllAppointments);
-router.get('/stats',  getDashboardStats);
-router.post('/',      createAppointment);
-router.put('/:id',    updateStatus);
+router.get('/all',   getAllAppointments);
+router.get('/stats', getDashboardStats);
+router.post('/',     createAppointment);
+
+router.patch('/:id/status', updateStatus);  // ← só status
+router.put('/:id',          updateAppointment); // ← edição completa
+
 router.delete('/:id', deleteAppointment);
-router.put('/:id', updateAppointment)
 
 export default router;
