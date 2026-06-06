@@ -113,7 +113,7 @@ export async function createAppointment(req, res) {
   } = req.body;
 
   if (!clientName) {
-    return res.status(400).json({ error: 'Nome do cliente e corte são obrigatórios' });
+    return res.status(400).json({ error: 'Nome do cliente é obrigatório' });
   }
 
   try {
@@ -131,7 +131,6 @@ export async function createAppointment(req, res) {
       consumables.map((c) => ({ name: c.name, price: parseFloat(c.price) || 0, qty: c.qty || 1 }))
     );
 
-    // ✅ Sem ::jsonb — passa como string, o Postgres infere o tipo pela coluna
     const rows = await sql`
       INSERT INTO appointments
         (barber_id, client_name, client_phone, cut,
@@ -150,8 +149,8 @@ export async function createAppointment(req, res) {
 
     return res.status(201).json({ appointment: formatRow(appt) });
   } catch (err) {
-    console.error('Erro createAppointment:', err); // ← vai aparecer no log do Render
-    return res.status(500).json({ error: err.message }); // ← temporário para ver o erro real
+    console.error('Erro createAppointment:', err);
+    return res.status(500).json({ error: err.message });
   }
 }
 
@@ -212,7 +211,6 @@ export async function getDashboardStats(req, res) {
   const { id: barberId } = req.barber;
 
   try {
-    // "hoje" em UTC — ajuste o fuso se necessário
     const todayIso = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
 
     const [todayStats, weekStats, topCuts] = await Promise.all([
