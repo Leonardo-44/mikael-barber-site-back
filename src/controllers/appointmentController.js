@@ -149,8 +149,9 @@ export async function createAppointment(req, res) {
 
 export async function updateStatus(req, res) {
   const { id } = req.params;
-  const { id: barberId } = req.barber;
+  const { id: barberId, username } = req.barber;
   const { status } = req.body;
+  const isAdmin = username?.toLowerCase() === process.env.ADMIN_USERNAME?.toLowerCase();
 
   const validStatus = ['done', 'pending', 'cancelled'];
   if (!validStatus.includes(status)) {
@@ -158,11 +159,17 @@ export async function updateStatus(req, res) {
   }
 
   try {
-    const rows = await sql`
-      UPDATE appointments SET status = ${status}
-      WHERE id = ${id} AND barber_id = ${barberId}
-      RETURNING *
-    `;
+    const rows = isAdmin
+      ? await sql`
+          UPDATE appointments SET status = ${status}
+          WHERE id = ${id}
+          RETURNING *
+        `
+      : await sql`
+          UPDATE appointments SET status = ${status}
+          WHERE id = ${id} AND barber_id = ${barberId}
+          RETURNING *
+        `;
 
     if (!rows[0]) return res.status(404).json({ error: 'Agendamento não encontrado' });
 
