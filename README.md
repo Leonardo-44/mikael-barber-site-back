@@ -1,21 +1,32 @@
 # 🪒 Mikael Barber — Backend
 
-Node.js + Express + JavaScript | Neon (PostgreSQL) | Deploy no Render
+Backend da aplicação **Mikael Barber**, desenvolvido com Node.js, Express e PostgreSQL.
+
+### 🛠️ Tecnologias
+
+* Node.js
+* Express
+* JavaScript
+* PostgreSQL
+* Neon
+* JWT
+* bcrypt
+* Render
 
 ---
 
 ## 📁 Estrutura
 
-```
+```text
 src/
 ├── config/
-│   ├── database.js      # Conexão com Neon
-│   └── migrate.js       # Cria tabelas e insere barbeiros padrão
+│   ├── database.js      # Conexão com o PostgreSQL
+│   └── migrate.js       # Criação das tabelas e dados iniciais
 ├── controllers/
 │   ├── authController.js
 │   └── appointmentController.js
 ├── middlewares/
-│   └── auth.js          # Proteção JWT
+│   └── auth.js          # Proteção das rotas com JWT
 ├── routes/
 │   ├── auth.js
 │   └── appointments.js
@@ -27,102 +38,177 @@ src/
 ## ⚙️ Setup local
 
 ### 1. Instalar dependências
+
 ```bash
 npm install
 ```
 
 ### 2. Configurar variáveis de ambiente
+
+Copie o arquivo de exemplo:
+
 ```bash
 cp .env.example .env
 ```
 
-Edite o `.env`:
+Depois configure o arquivo `.env` com **suas próprias credenciais**:
+
 ```env
-DATABASE_URL=postgresql://user:senha@host.neon.tech/neondb?sslmode=require
-JWT_SECRET=chave_secreta_longa_e_aleatoria
+DATABASE_URL=postgresql://USUARIO:SENHA@SEU_HOST.neon.tech/SEU_BANCO?sslmode=require
+JWT_SECRET=SUA_CHAVE_SECRETA_ALEATORIA
 PORT=3333
 FRONTEND_URL=http://localhost:5173
 ```
 
-### 3. Criar tabelas no banco
+> ⚠️ Nunca envie o arquivo `.env` para o GitHub.
+> As credenciais acima são apenas exemplos.
+
+---
+
+## 🗄️ Banco de dados
+
+Para criar as tabelas:
+
 ```bash
 npm run db:migrate
 ```
-Isso cria as tabelas e insere dois barbeiros com senha `1234`:
-- usuário: `mikael`
-- usuário: `rafael`
 
-### 4. Rodar em desenvolvimento
+A migração cria a estrutura necessária para o funcionamento da aplicação.
+
+> 🔐 As credenciais dos usuários não devem ser documentadas no README.
+>
+> Usuários iniciais, quando necessários, devem ser configurados de forma segura durante a instalação ou através de variáveis de ambiente.
+
+---
+
+## 🚀 Rodando localmente
+
 ```bash
 npm run dev
+```
+
+O servidor ficará disponível em:
+
+```text
+http://localhost:3333
 ```
 
 ---
 
 ## 🚀 Deploy no Render
 
-1. Suba o código no GitHub
-2. No Render: **New → Web Service**
+1. Suba o projeto para o GitHub.
+2. No Render, crie um **Web Service**.
 3. Configure:
-   - **Root Directory:** *(raiz do repo)*
-   - **Build Command:** `npm install`
-   - **Start Command:** `npm start`
-4. Adicione as variáveis de ambiente:
-   ```
-   DATABASE_URL  = [connection string do Neon]
-   JWT_SECRET    = [sua chave secreta]
-   FRONTEND_URL  = [URL do seu frontend]
-   ```
-5. Após o primeiro deploy, rode a migração via **Render Shell**:
-   ```bash
-   npm run db:migrate
-   ```
+
+```text
+Build Command:
+npm install
+
+Start Command:
+npm start
+```
+
+4. Configure as variáveis de ambiente no painel do Render:
+
+```text
+DATABASE_URL
+JWT_SECRET
+FRONTEND_URL
+```
+
+> ⚠️ Os valores dessas variáveis devem ser configurados diretamente no ambiente do Render.
+> Não coloque credenciais reais no código ou no README.
+
+Após o deploy, execute a migração conforme a configuração do projeto:
+
+```bash
+npm run db:migrate
+```
 
 ---
 
 ## 🔗 Endpoints
 
-| Método | Rota | Descrição | Auth |
-|--------|------|-----------|------|
-| GET | `/health` | Health check | ❌ |
-| POST | `/api/auth/login` | Login | ❌ |
-| GET | `/api/auth/me` | Barbeiro logado | ✅ |
-| GET | `/api/appointments` | Meus atendimentos | ✅ |
-| GET | `/api/appointments/all` | Todos os atendimentos | ✅ |
-| GET | `/api/appointments/stats` | Estatísticas | ✅ |
-| POST | `/api/appointments` | Criar atendimento | ✅ |
-| PUT | `/api/appointments/:id` | Editar atendimento | ✅ |
-| DELETE | `/api/appointments/:id` | Deletar atendimento | ✅ |
+| Método | Rota                      | Descrição                         | Auth |
+| ------ | ------------------------- | --------------------------------- | ---- |
+| GET    | `/health`                 | Health check                      | ❌    |
+| POST   | `/api/auth/login`         | Login                             | ❌    |
+| GET    | `/api/auth/me`            | Usuário autenticado               | ✅    |
+| GET    | `/api/appointments`       | Meus atendimentos                 | ✅    |
+| GET    | `/api/appointments/all`   | Todos os atendimentos autorizados | ✅    |
+| GET    | `/api/appointments/stats` | Estatísticas                      | ✅    |
+| POST   | `/api/appointments`       | Criar atendimento                 | ✅    |
+| PUT    | `/api/appointments/:id`   | Editar atendimento                | ✅    |
+| DELETE | `/api/appointments/:id`   | Deletar atendimento               | ✅    |
 
-### Exemplo de login
+---
+
+## 🔐 Exemplo de login
+
+Utilize credenciais de teste configuradas localmente:
+
 ```bash
 curl -X POST http://localhost:3333/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username":"mikael","password":"1234"}'
+  -d '{"username":"USUARIO_DE_TESTE","password":"SENHA_DE_TESTE"}'
 ```
 
-### Exemplo de criar atendimento
-```bash
-curl -X POST http://localhost:3333/api/appointments \
-  -H "Authorization: Bearer SEU_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "client_name": "João Silva",
-    "client_phone": "(99) 99999-9999",
-    "haircut": "Degradê",
-    "consumed": ["Cerveja", "Água"],
-    "price": 45.00,
-    "notes": "Cliente VIP"
-  }'
-```
+> Nunca coloque senhas reais em exemplos publicados no GitHub.
 
 ---
 
 ## ➕ Adicionar novo barbeiro
 
-No painel do Neon (SQL Editor):
+O usuário deve ser criado utilizando uma senha protegida por **bcrypt**.
+
+Exemplo:
+
 ```sql
--- Gere o hash em: https://bcrypt.online (rounds: 10)
 INSERT INTO barbers (name, username, password, avatar)
-VALUES ('Nome', 'usuario', '$2a$10$HASH_AQUI', 'N');
+VALUES (
+  'Nome do Barbeiro',
+  'usuario_exemplo',
+  'HASH_BCRYPT_DA_SENHA',
+  'N'
+);
 ```
+
+> 🔐 Nunca coloque uma senha real diretamente no SQL ou no README.
+>
+> O valor armazenado no banco deve ser o **hash bcrypt**, e não a senha original.
+
+---
+
+## 🔒 Segurança
+
+Antes de publicar o projeto:
+
+* Nunca envie `.env` para o GitHub.
+* Nunca publique `DATABASE_URL` real.
+* Nunca publique `JWT_SECRET` real.
+* Nunca publique senhas de usuários.
+* Nunca publique tokens JWT.
+* Utilize senhas fortes em produção.
+* Utilize bcrypt para armazenar senhas.
+* Configure as variáveis sensíveis diretamente no Render.
+* Mantenha `.env` no `.gitignore`.
+
+### `.gitignore`
+
+Certifique-se de que o projeto contém:
+
+```gitignore
+.env
+.env.*
+!.env.example
+node_modules/
+```
+
+O arquivo `.env.example` pode ser publicado no GitHub, desde que contenha apenas valores fictícios.
+
+---
+
+## 📄 Licença
+
+Este projeto foi desenvolvido para fins de estudo e portfólio.
