@@ -1,8 +1,3 @@
-// ============================================
-//  routes/sales.js — Mikael Barber (Neon)
-//  Vendas de produtos registradas no balcão pelo recepcionista.
-// ============================================
-
 import express from 'express';
 import { neon } from '@neondatabase/serverless';
 import { authMiddleware } from '../middlewares/auth.js';
@@ -10,10 +5,8 @@ import { authMiddleware } from '../middlewares/auth.js';
 const router = express.Router();
 const sql = neon(process.env.DATABASE_URL);
 
-// Fuso do Piauí — "hoje" precisa seguir o horário local, não o UTC do servidor
 const TZ = 'America/Fortaleza';
 
-// ── GET /api/sales?period=day|week|month ─────
 router.get('/', authMiddleware, async (req, res) => {
   const period = ['day', 'week', 'month'].includes(req.query.period)
     ? req.query.period
@@ -23,8 +16,8 @@ router.get('/', authMiddleware, async (req, res) => {
     const sales = await sql`
       SELECT *
       FROM sales
-      WHERE date_trunc(${period}, created_at AT TIME ZONE ${TZ}::text)
-    = date_trunc(${period}, NOW() AT TIME ZONE ${TZ}::text)
+      WHERE date_trunc(${period}::text, created_at AT TIME ZONE ${TZ}::text)
+          = date_trunc(${period}::text, NOW() AT TIME ZONE ${TZ}::text)
       ORDER BY created_at DESC
     `;
     res.json({ sales });
@@ -34,9 +27,6 @@ router.get('/', authMiddleware, async (req, res) => {
   }
 });
 
-// ── POST /api/sales — registra uma venda ─────
-// Body: { client_name, product_id, quantity, sold_by }
-// O preço e a comissão vêm do BANCO, nunca do navegador.
 router.post('/', authMiddleware, async (req, res) => {
   const { client_name, product_id, sold_by } = req.body;
   const quantity = parseInt(req.body.quantity, 10) || 1;
@@ -46,21 +36,20 @@ router.post('/', authMiddleware, async (req, res) => {
   if (quantity < 1)         return res.status(400).json({ error: 'Quantidade inválida' });
 
   try {
-    // 1) Dá baixa no estoque só se houver quantidade suficiente
     const [product] = await sql`
       UPDATE products
       SET stock = stock - ${quantity}, updated_at = NOW()
       WHERE id = ${product_id} AND stock >= ${quantity}
-      RETURNING id, name, price, stock, commission_percent
+      RETURNING id, name, price, stock, commission_percent, commission_target
     `;
 
     if (!product) {
       return res.status(400).json({ error: 'Produto não encontrado ou estoque insuficiente' });
     }
 
-    // 2) Registra a venda com os valores daquele momento
     const unitPrice  = parseFloat(product.price);
-    const percent    = parseFloat(product.commission_percent || 0);
+    const target     = product.commission_target || 'attendant';
+    const percent    = target === 'none' ? 0 : parseFloat(product.commission_percent || 0);
     const total      = Math.round(unitPrice * quantity * 100) / 100;
     const commission = Math.round(total * percent) / 100;
 
@@ -68,17 +57,16 @@ router.post('/', authMiddleware, async (req, res) => {
       const [sale] = await sql`
         INSERT INTO sales (
           client_name, product_id, product_name, quantity,
-          unit_price, total, commission_percent, commission_value, sold_by
+          unit_price, total, commission_percent, commission_value, commission_target, sold_by
         )
         VALUES (
           ${client_name.trim()}, ${String(product.id)}, ${product.name}, ${quantity},
-          ${unitPrice}, ${total}, ${percent}, ${commission}, ${sold_by || null}
+          ${unitPrice}, ${total}, ${percent}, ${commission}, ${target}, ${sold_by || null}
         )
         RETURNING *
       `;
       res.status(201).json({ sale, stock: product.stock });
     } catch (insertErr) {
-      // Se salvar a venda falhar, devolve o estoque que acabou de sair
       await sql`UPDATE products SET stock = stock + ${quantity} WHERE id = ${product_id}`;
       throw insertErr;
     }
@@ -88,7 +76,6 @@ router.post('/', authMiddleware, async (req, res) => {
   }
 });
 
-// ── DELETE /api/sales/:id — cancela venda e devolve o estoque ──
 router.delete('/:id', authMiddleware, async (req, res) => {
   try {
     const [sale] = await sql`
