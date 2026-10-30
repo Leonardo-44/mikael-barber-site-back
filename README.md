@@ -1,128 +1,110 @@
 # 🪒 Mikael Barber — Backend
 
-Node.js + Express + JavaScript | Neon (PostgreSQL) | Deploy no Render
+Backend da aplicação **Mikael Barber**, desenvolvido com Node.js e Express.
 
----
+## 🛠️ Tecnologias
+
+* Node.js
+* Express
+* PostgreSQL
+* Neon
+* JWT
+* bcrypt
 
 ## 📁 Estrutura
 
-```
+```text id="2f7x8m"
 src/
 ├── config/
-│   ├── database.js      # Conexão com Neon
-│   └── migrate.js       # Cria tabelas e insere barbeiros padrão
+│   ├── database.js
+│   └── migrate.js
 ├── controllers/
 │   ├── authController.js
 │   └── appointmentController.js
 ├── middlewares/
-│   └── auth.js          # Proteção JWT
+│   └── auth.js
 ├── routes/
 │   ├── auth.js
 │   └── appointments.js
-└── index.js             # Entry point
+└── index.js
 ```
 
----
+## ⚙️ Instalação
 
-## ⚙️ Setup local
+Clone o projeto e instale as dependências:
 
-### 1. Instalar dependências
-```bash
+```bash id="m5j3qk"
 npm install
 ```
 
-### 2. Configurar variáveis de ambiente
-```bash
-cp .env.example .env
-```
+Crie o arquivo `.env`:
 
-Edite o `.env`:
-```env
-DATABASE_URL=postgresql://user:senha@host.neon.tech/neondb?sslmode=require
-JWT_SECRET=chave_secreta_longa_e_aleatoria
+```env id="q2v8nd"
+DATABASE_URL=postgresql://USUARIO:SENHA@SEU_HOST.neon.tech/SEU_BANCO?sslmode=require
+JWT_SECRET=SUA_CHAVE_SECRETA
 PORT=3333
 FRONTEND_URL=http://localhost:5173
 ```
 
-### 3. Criar tabelas no banco
-```bash
+> Não publique o arquivo `.env` no GitHub.
+
+## 🗄️ Banco de dados
+
+Execute a migração:
+
+```bash id="r9c4tx"
 npm run db:migrate
 ```
-Isso cria as tabelas e insere dois barbeiros com senha `1234`:
-- usuário: `mikael`
-- usuário: `rafael`
 
-### 4. Rodar em desenvolvimento
-```bash
+## ▶️ Desenvolvimento
+
+```bash id="k3m7pz"
 npm run dev
 ```
 
----
+Servidor local:
 
-## 🚀 Deploy no Render
-
-1. Suba o código no GitHub
-2. No Render: **New → Web Service**
-3. Configure:
-   - **Root Directory:** *(raiz do repo)*
-   - **Build Command:** `npm install`
-   - **Start Command:** `npm start`
-4. Adicione as variáveis de ambiente:
-   ```
-   DATABASE_URL  = [connection string do Neon]
-   JWT_SECRET    = [sua chave secreta]
-   FRONTEND_URL  = [URL do seu frontend]
-   ```
-5. Após o primeiro deploy, rode a migração via **Render Shell**:
-   ```bash
-   npm run db:migrate
-   ```
-
----
-
-## 🔗 Endpoints
-
-| Método | Rota | Descrição | Auth |
-|--------|------|-----------|------|
-| GET | `/health` | Health check | ❌ |
-| POST | `/api/auth/login` | Login | ❌ |
-| GET | `/api/auth/me` | Barbeiro logado | ✅ |
-| GET | `/api/appointments` | Meus atendimentos | ✅ |
-| GET | `/api/appointments/all` | Todos os atendimentos | ✅ |
-| GET | `/api/appointments/stats` | Estatísticas | ✅ |
-| POST | `/api/appointments` | Criar atendimento | ✅ |
-| PUT | `/api/appointments/:id` | Editar atendimento | ✅ |
-| DELETE | `/api/appointments/:id` | Deletar atendimento | ✅ |
-
-### Exemplo de login
-```bash
-curl -X POST http://localhost:3333/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"username":"mikael","password":"1234"}'
+```text id="v6n2qa"
+http://localhost:3333
 ```
 
-### Exemplo de criar atendimento
-```bash
-curl -X POST http://localhost:3333/api/appointments \
-  -H "Authorization: Bearer SEU_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "client_name": "João Silva",
-    "client_phone": "(99) 99999-9999",
-    "haircut": "Degradê",
-    "consumed": ["Cerveja", "Água"],
-    "price": 45.00,
-    "notes": "Cliente VIP"
-  }'
+## 🔗 API
+
+| Método | Endpoint                  | Descrição             | Auth |
+| ------ | ------------------------- | --------------------- | ---- |
+| GET    | `/health`                 | Status da API         | ❌    |
+| POST   | `/api/auth/login`         | Login                 | ❌    |
+| GET    | `/api/auth/me`            | Usuário autenticado   | ✅    |
+| GET    | `/api/appointments`       | Atendimentos          | ✅    |
+| GET    | `/api/appointments/all`   | Todos os atendimentos | ✅    |
+| GET    | `/api/appointments/stats` | Estatísticas          | ✅    |
+| POST   | `/api/appointments`       | Criar atendimento     | ✅    |
+| PUT    | `/api/appointments/:id`   | Editar atendimento    | ✅    |
+| DELETE | `/api/appointments/:id`   | Excluir atendimento   | ✅    |
+
+## 🚀 Deploy
+
+O backend pode ser hospedado no **Render**.
+
+Configure no ambiente de produção:
+
+```text id="h8k2zs"
+DATABASE_URL
+JWT_SECRET
+FRONTEND_URL
 ```
 
----
+Não coloque valores reais dessas variáveis no código ou no GitHub.
 
-## ➕ Adicionar novo barbeiro
+## 🔒 Variáveis de ambiente
 
-No painel do Neon (SQL Editor):
-```sql
--- Gere o hash em: https://bcrypt.online (rounds: 10)
-INSERT INTO barbers (name, username, password, avatar)
-VALUES ('Nome', 'usuario', '$2a$10$HASH_AQUI', 'N');
+O projeto utiliza:
+
+```text id="n4x7cw"
+DATABASE_URL
+JWT_SECRET
+PORT
+FRONTEND_URL
 ```
+
+Mantenha as informações sensíveis apenas no `.env` local ou nas variáveis de ambiente do serviço de hospedagem.
