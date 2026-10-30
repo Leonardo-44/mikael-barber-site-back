@@ -7,7 +7,9 @@ import appointmentRoutes from './routes/appointments.js';
 import productRoutes     from './routes/products.js';
 import serviceRoutes     from './routes/services.js';
 import clientRoutes      from './routes/clients.js';
-import despesasRoutes    from './routes/despesas.js'; // ✅ novo
+import despesasRoutes    from './routes/despesas.js';
+import salesRoutes       from './routes/sales.js';       // ✅ novo (Balcão)
+import commissionRoutes  from './routes/commissions.js'; // ✅ novo (Comissões)
 
 const app = express();
 const PORT = process.env.PORT || 3333;
@@ -41,7 +43,9 @@ app.use('/api/appointments', appointmentRoutes);
 app.use('/api/products',     productRoutes);
 app.use('/api/services',     serviceRoutes);
 app.use('/api/clients',      clientRoutes);
-app.use('/api/despesas',     despesasRoutes); // ✅ novo
+app.use('/api/despesas',     despesasRoutes);
+app.use('/api/sales',        salesRoutes);       // ✅ novo
+app.use('/api/commissions',  commissionRoutes);  // ✅ novo
 
 app.use((_req, res) => {
   res.status(404).json({ error: 'Rota não encontrada' });
